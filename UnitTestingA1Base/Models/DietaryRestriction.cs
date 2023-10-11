@@ -1,8 +1,16 @@
-﻿namespace UnitTestingA1Base.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace UnitTestingA1Base.Models
 {
     public class DietaryRestriction
     {
         public int Id { get; set; }
-        public string Name { get; set; }    
+
+        [Required]
+        [StringLength(100)]
+        public string Name { get; set; }
+
+        public ICollection<IngredientRestriction> IngredientRestrictions { get; set; }
     }
+
 }
