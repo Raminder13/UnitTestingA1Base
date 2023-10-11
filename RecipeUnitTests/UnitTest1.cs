@@ -1,288 +1,292 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using UnitTestingA1Base.Data;
 using UnitTestingA1Base.Models;
-using System.Collections.Generic;
+using System;
+using System.Linq;
+using Moq;
 
-namespace RecipeUnitTests { 
 [TestClass]
-public class UnitTest1
+public class BusinessLogicLayerTests
 {
-        private BusinessLogicLayer _bll;
-        private AppStorage _appStorage;
+    private Mock<AppStorage> appStorageMock;
+    private BusinessLogicLayer businessLogicLayer;
 
-        [TestInitialize]
-        public void Initialize()
-        {
-            _appStorage = new AppStorage();
-            _bll = new BusinessLogicLayer(_appStorage);
-        }
-
-        [TestMethod]
-        public void GetRecipesByIngredient_ValidIngredientId_ReturnsRecipes()
-        {
-            // Arrange
-            int validIngredientId = 1;
-
-            // Act
-            var recipes = _bll.GetRecipesByIngredient(validIngredientId, null);
-
-            // Assert
-            Assert.IsNotNull(recipes);
-            Assert.IsTrue(recipes.Count > 0);
-        }
-
-        public HashSet<Recipe> GetRecipesByIngredient(int? id, string? name)
-        {
-            Ingredient ingredient;
-            HashSet<Recipe> recipes = new HashSet<Recipe>();
-
-            if (id != null)
-            {
-                ingredient = _appStorage.Ingredients.FirstOrDefault(i => i.Id == id);
-                if (ingredient != null)
-                {
-                    HashSet<RecipeIngredient> recipeIngredients = _appStorage.RecipeIngredients.Where(rI => rI.IngredientId == ingredient.Id).ToHashSet();
-                    recipes = _appStorage.Recipes.Where(r => recipeIngredients.Any(ri => ri.RecipeId == r.Id)).ToHashSet();
-                }
-            }
-
-            return recipes;
-        }
-
-
-        [TestMethod]
-        public void GetRecipesByIngredient_InvalidIngredientName_ReturnsEmptyHashSet()
-        {
-            // Arrange
-            string invalidIngredientName = "Nonexistent Ingredient";
-
-            // Act
-            var recipes = _bll.GetRecipesByIngredient(null, invalidIngredientName);
-
-            // Assert
-            Assert.IsNotNull(recipes);
-            Assert.AreEqual(0, recipes.Count);
-        }
-
-        [TestMethod]
-        public void GetRecipesByDietaryRestriction_ValidDietaryRestrictionName_ReturnsRecipes()
-        {
-            // Arrange
-            string validDietaryRestrictionName = "Vegetarian";
-
-            // Act
-            var recipes = _bll.GetRecipesByDietaryRestriction(validDietaryRestrictionName, 0);
-
-            // Assert
-            Assert.IsNotNull(recipes);
-            Assert.IsTrue(recipes.Count > 0);
-        }
-
-        [TestMethod]
-        public void GetRecipesByDietaryRestriction_InvalidDietaryRestrictionName_ReturnsEmptyHashSet()
-        {
-            // Arrange
-            string invalidDietaryRestrictionName = "InvalidDiet";
-
-            // Act
-            var recipes = _bll.GetRecipesByDietaryRestriction(invalidDietaryRestrictionName, 0);
-
-            // Assert
-            Assert.IsNotNull(recipes);
-            Assert.AreEqual(0, recipes.Count);
-        }
-
-        [TestMethod]
-        public void GetRecipesByNameOrId_ValidRecipeId_ReturnsRecipe()
-        {
-            // Arrange
-            int validRecipeId = 1;
-
-            // Act
-            var recipes = _bll.GetRecipesByNameOrId(null, validRecipeId);
-
-            // Assert
-            Assert.IsNotNull(recipes);
-            Assert.AreEqual(1, recipes.Count);
-        }
-
-        [TestMethod]
-        public void GetRecipesByNameOrId_InvalidRecipeId_ReturnsEmptyHashSet()
-        {
-            // Arrange
-            int invalidRecipeId = -1;
-
-            // Act
-            var recipes = _bll.GetRecipesByNameOrId(null, invalidRecipeId);
-
-            // Assert
-            Assert.IsNotNull(recipes);
-            Assert.AreEqual(0, recipes.Count);
-        }
-
-        [TestMethod]
-        public void GetRecipesByNameOrId_ValidRecipeName_ReturnsRecipes()
-        {
-            // Arrange: Create the test input with a valid recipe name
-            string validRecipeName = "Spaghetti Carbonara";
-
-            // Act: Call the method with the test input
-            var recipes = _bll.GetRecipesByNameOrId(validRecipeName, 0);
-
-            // Assert: Check if the returned recipes contain the expected recipe
-            Assert.IsNotNull(recipes);
-            Assert.IsTrue(recipes.Count > 0);
-        }
-
-
-        [TestMethod]
-        public void GetRecipesByNameOrId_InvalidRecipeName_ReturnsEmptyHashSet()
-        {
-            // Arrange
-            string invalidRecipeName = "Nonexistent Recipe";
-
-            // Act
-            var recipes = _bll.GetRecipesByNameOrId(invalidRecipeName, 0);
-
-            // Assert
-            Assert.IsNotNull(recipes);
-            Assert.AreEqual(0, recipes.Count);
-        }
-
-        [TestMethod]
-        public void AddRecipeAndIngredients_ValidData_AddsRecipeAndIngredients()
-        {
-            // Arrange
-            var recipe = new Recipe
-            {
-                Name = "New Recipe",
-                // Add other required properties
-            };
-
-            var ingredients = new List<Ingredient>
-        {
-            new Ingredient { Name = "Ingredient1" },
-            new Ingredient { Name = "Ingredient2" },
-        };
-
-            var input = new BusinessLogicLayer.RecipeInput
-            {
-                Recipe = recipe,
-                Ingredients = ingredients,
-            };
-
-            // Act
-            _bll.AddRecipeAndIngredients(input);
-
-            // Assert
-            Assert.IsTrue(_bll.DoesRecipeExist("New Recipe"));
-        }
-
-        [TestMethod]
-        [ExpectedException(typeof(InvalidOperationException))]
-        public void AddRecipeAndIngredients_DuplicateRecipeName_ThrowsException()
-        {
-            // Arrange
-            var recipe = new Recipe
-            {
-                Name = "Spaghetti Carbonara",
-                // Add other required properties
-            };
-
-            var ingredients = new List<Ingredient>
-        {
-            new Ingredient { Name = "Ingredient1" },
-            new Ingredient { Name = "Ingredient2" },
-        };
-
-            var input = new BusinessLogicLayer.RecipeInput
-            {
-                Recipe = recipe,
-                Ingredients = ingredients,
-            };
-
-            // Act
-            _bll.AddRecipeAndIngredients(input);
-        }
-
-        [TestMethod]
-        public void DoesRecipeExist_ExistingRecipeName_ReturnsTrue()
-        {
-            // Arrange
-            string existingRecipeName = "Chicken Alfredo";
-
-            // Act
-            bool exists = _bll.DoesRecipeExist(existingRecipeName);
-
-            // Assert
-            Assert.IsTrue(exists);
-        }
-
-        [TestMethod]
-        public void DoesRecipeExist_NonExistingRecipeName_ReturnsFalse()
-        {
-            // Arrange
-            string nonExistingRecipeName = "Nonexistent Recipe";
-
-            // Act
-            bool exists = _bll.DoesRecipeExist(nonExistingRecipeName);
-
-            // Assert
-            Assert.IsFalse(exists);
-        }
-
-        [TestMethod]
-        public void DeleteRecipe_ValidRecipeId_DeletesRecipe()
-        {
-            // Arrange
-            int validRecipeId = 1;
-
-            // Act
-            bool deleted = _bll.DeleteRecipe(validRecipeId, null);
-
-            // Assert
-            Assert.IsTrue(deleted);
-        }
-
-        [TestMethod]
-        public void DeleteRecipe_ValidRecipeName_DeletesRecipe()
-        {
-            // Arrange
-            string validRecipeName = "Spaghetti Carbonara"; // Replace with the correct existing recipe name
-
-            // Act
-            bool deleted = _bll.DeleteRecipe(0, validRecipeName);
-
-            // Assert
-            Assert.IsTrue(deleted);
-        }
-
-
-        [TestMethod]
-        public void DeleteRecipe_InvalidRecipeId_ReturnsFalse()
-        {
-            // Arrange
-            int invalidRecipeId = -1;
-
-            // Act
-            bool deleted = _bll.DeleteRecipe(invalidRecipeId, null);
-
-            // Assert
-            Assert.IsFalse(deleted);
-        }
-
-        [TestMethod]
-        public void DeleteRecipe_InvalidRecipeName_ReturnsFalse()
-        {
-            // Arrange
-            string invalidRecipeName = "Nonexistent Recipe";
-
-            // Act
-            bool deleted = _bll.DeleteRecipe(0, invalidRecipeName);
-
-            // Assert
-            Assert.IsFalse(deleted);
-        }
-
+    [TestInitialize]
+    public void TestInitialize()
+    {
+        appStorageMock = new Mock<AppStorage>();
+        businessLogicLayer = new BusinessLogicLayer(appStorageMock.Object);
     }
+
+    [TestMethod]
+    public void GetRecipesByIngredient_WithValidIngredientId_ReturnsRecipes()
+    {
+        // Arrange
+        var ingredientId = 1;
+        var ingredient = new Ingredient { Id = ingredientId, Name = "TestIngredient" };
+        var recipe1 = new Recipe { Id = 1, Name = "Recipe1" };
+        var recipe2 = new Recipe { Id = 2, Name = "Recipe2" };
+        var recipeIngredients = new HashSet<RecipeIngredient>
+    {
+        new RecipeIngredient { IngredientId = ingredientId, RecipeId = 1, Amount = 100, MeasurementUnit = MeasurementUnit.Grams },
+        new RecipeIngredient { IngredientId = ingredientId, RecipeId = 2, Amount = 150, MeasurementUnit = MeasurementUnit.Grams },
+    };
+        appStorageMock.Setup(a => a.Ingredients).Returns(new HashSet<Ingredient> { ingredient });
+        appStorageMock.Setup(a => a.RecipeIngredients).Returns(recipeIngredients);
+        appStorageMock.Setup(a => a.Recipes).Returns(new HashSet<Recipe> { recipe1, recipe2 });
+
+        // Act
+        var result = businessLogicLayer.GetRecipesByIngredient(ingredientId, null);
+
+        // Assert
+        CollectionAssert.Contains(result.ToArray(), recipe1);
+        CollectionAssert.Contains(result.ToArray(), recipe2);
+    }
+
+
+    [TestMethod]
+    public void AddRecipeAndIngredients_WithNewIngredients_AddsRecipeAndIngredients()
+    {
+        // Arrange
+        var recipeInput = new BusinessLogicLayer.RecipeInput
+        {
+            Recipe = new Recipe { Name = "NewRecipe" },
+            Ingredients = new List<Ingredient>
+                {
+                    new Ingredient { Name = "Ingredient1" },
+                    new Ingredient { Name = "Ingredient2" }
+                }
+        };
+        appStorageMock.Setup(a => a.GeneratePrimaryKey()).Returns(123);
+
+        // Act
+        businessLogicLayer.AddRecipeAndIngredients(recipeInput);
+
+        // Assert
+        appStorageMock.Verify(a => a.GeneratePrimaryKey(), Times.Exactly(3));
+        appStorageMock.Verify(a => a.Recipes.Add(It.Is<Recipe>(r => r.Name == "NewRecipe")), Times.Once);
+        appStorageMock.Verify(a => a.Ingredients.Add(It.Is<Ingredient>(i => i.Name == "Ingredient1")), Times.Once);
+        appStorageMock.Verify(a => a.Ingredients.Add(It.Is<Ingredient>(i => i.Name == "Ingredient2")), Times.Once);
+        appStorageMock.Verify(a => a.RecipeIngredients.Add(It.IsAny<RecipeIngredient>()), Times.Exactly(2));
+    }
+
+    [TestMethod]
+    public void GetRecipesByDietaryRestriction_WithValidDietaryRestriction_ReturnsRecipes()
+    {
+        // Arrange
+        var dietaryRestriction = new DietaryRestriction { Id = 1, Name = "TestRestriction" };
+        var recipe1 = new Recipe { Id = 1, Name = "Recipe1" };
+        var recipe2 = new Recipe { Id = 2, Name = "Recipe2" };
+        var ingredientRestrictions = new HashSet<IngredientRestriction>
+    {
+        new IngredientRestriction { DietaryRestrictionId = 1, IngredientId = 1 },
+        new IngredientRestriction { DietaryRestrictionId = 1, IngredientId = 2 },
+    };
+        appStorageMock.Setup(a => a.DietaryRestrictions).Returns(new HashSet<DietaryRestriction> { dietaryRestriction });
+        appStorageMock.Setup(a => a.Recipes).Returns(new HashSet<Recipe> { recipe1, recipe2 });
+        appStorageMock.Setup(a => a.IngredientRestrictions).Returns(ingredientRestrictions);
+
+        // Act
+        var result = businessLogicLayer.GetRecipesByDietaryRestriction("TestRestriction", 0);
+
+        // Assert
+        Assert.IsTrue(result.Any(r => r.Id == 1));
+        Assert.IsTrue(result.Any(r => r.Id == 2));
+    }
+
+
+
+    [TestMethod]
+    public void GetRecipesByDietaryRestriction_WithInvalidDietaryRestriction_ReturnsEmptyList()
+    {
+        // Arrange
+        appStorageMock.Setup(a => a.DietaryRestrictions).Returns(new HashSet<DietaryRestriction>());
+
+        // Act
+        var result = businessLogicLayer.GetRecipesByDietaryRestriction("InvalidRestriction", 0);
+
+        // Assert
+        CollectionAssert.AreEqual(result, new HashSet<Recipe>());
+    }
+
+    [TestMethod]
+    public void GetRecipesByNameOrId_WithValidRecipeName_ReturnsMatchingRecipes()
+    {
+        // Arrange
+        var recipe1 = new Recipe { Id = 1, Name = "Recipe1" };
+        var recipe2 = new Recipe { Id = 2, Name = "Recipe2" };
+        appStorageMock.Setup(a => a.Recipes).Returns(new HashSet<Recipe> { recipe1, recipe2 });
+
+        // Act
+        var result = businessLogicLayer.GetRecipesByNameOrId("Recipe1", 0);
+
+        // Assert
+        Assert.IsTrue(result.Any(r => r.Name == "Recipe1"));
+        Assert.IsTrue(result.Any(r => r.Name == "Recipe2"));
+    }
+
+    [TestMethod]
+    public void GetRecipesByNameOrId_WithValidRecipeId_ReturnsMatchingRecipe()
+    {
+        // Arrange
+        var recipe1 = new Recipe { Id = 1, Name = "Recipe1" };
+        var recipe2 = new Recipe { Id = 2, Name = "Recipe2" };
+        var recipe3 = new Recipe { Id = 3, Name = "AnotherRecipe" };
+        appStorageMock.Setup(a => a.Recipes).Returns(new HashSet<Recipe> { recipe1, recipe2, recipe3 });
+
+        // Act
+        var result = businessLogicLayer.GetRecipesByNameOrId("", 2);
+
+        // Assert
+        CollectionAssert.Contains(result, recipe2);
+    }
+
+    [TestMethod]
+    public void GetRecipesByNameOrId_WithInvalidNameAndId_ReturnsEmptyList()
+    {
+        // Arrange
+        var recipe1 = new Recipe { Id = 1, Name = "Recipe1" };
+        var recipe2 = new Recipe { Id = 2, Name = "Recipe2" };
+        appStorageMock.Setup(a => a.Recipes).Returns(new HashSet<Recipe> { recipe1, recipe2 });
+
+        // Act
+        var result = businessLogicLayer.GetRecipesByNameOrId("InvalidName", 3);
+
+        // Assert
+        CollectionAssert.AreEqual(result, new HashSet<Recipe>());
+    }
+
+    [TestMethod]
+    public void DoesRecipeExist_WithExistingRecipeName_ReturnsTrue()
+    {
+        // Arrange
+        var recipeName = "ExistingRecipe";
+        var recipe1 = new Recipe { Id = 1, Name = recipeName };
+        appStorageMock.Setup(a => a.Recipes).Returns(new HashSet<Recipe> { recipe1 });
+
+        // Act
+        var result = businessLogicLayer.DoesRecipeExist(recipeName);
+
+        // Assert
+        Assert.IsTrue(result);
+    }
+
+    [TestMethod]
+    public void DoesRecipeExist_WithNonExistingRecipeName_ReturnsFalse()
+    {
+        // Arrange
+        appStorageMock.Setup(a => a.Recipes).Returns(new HashSet<Recipe>());
+
+        // Act
+        var result = businessLogicLayer.DoesRecipeExist("NonExistingRecipe");
+
+        // Assert
+        Assert.IsFalse(result);
+    }
+
+    [TestMethod]
+    public void DeleteIngredient_WithValidIngredientId_DeletesIngredient()
+    {
+        // Arrange
+        var ingredientId = 1;
+        var ingredientToDelete = new Ingredient { Id = ingredientId, Name = "IngredientToDelete" };
+        var recipe1 = new Recipe { Id = 1, Name = "Recipe1" };
+        appStorageMock.Setup(a => a.Ingredients).Returns(new HashSet<Ingredient> { ingredientToDelete });
+        appStorageMock.Setup(a => a.RecipeIngredients).Returns(new HashSet<RecipeIngredient> { new RecipeIngredient { IngredientId = ingredientId, RecipeId = 1 } });
+        appStorageMock.Setup(a => a.Recipes).Returns(new HashSet<Recipe> { recipe1 });
+
+        // Act
+        var result = businessLogicLayer.DeleteIngredient(ingredientId, null);
+
+        // Assert
+        Assert.IsTrue(result);
+        appStorageMock.Verify(a => a.Ingredients.Remove(ingredientToDelete), Times.Once);
+    }
+
+    [TestMethod]
+    public void DeleteIngredient_WithNonExistingIngredient_ReturnsFalse()
+    {
+        // Arrange
+        appStorageMock.Setup(a => a.Ingredients).Returns(new HashSet<Ingredient>());
+
+        // Act
+        var result = businessLogicLayer.DeleteIngredient(1, "NonExistingIngredient");
+
+        // Assert
+        Assert.IsFalse(result);
+    }
+
+    [TestMethod]
+    public void DeleteIngredient_WithMultipleRecipesUsingIngredient_ReturnsFalse()
+    {
+        // Arrange
+        var ingredientId = 1;
+        var ingredientToDelete = new Ingredient { Id = ingredientId, Name = "IngredientToDelete" };
+        appStorageMock.Setup(a => a.Ingredients).Returns(new HashSet<Ingredient> { ingredientToDelete });
+        appStorageMock.Setup(a => a.RecipeIngredients).Returns(new HashSet<RecipeIngredient>
+            {
+                new RecipeIngredient { IngredientId = ingredientId, RecipeId = 1 },
+                new RecipeIngredient { IngredientId = ingredientId, RecipeId = 2 }
+            });
+
+        // Act
+        var result = businessLogicLayer.DeleteIngredient(ingredientId, null);
+
+        // Assert
+        Assert.IsFalse(result);
+        appStorageMock.Verify(a => a.Ingredients.Remove(ingredientToDelete), Times.Never);
+    }
+
+    [TestMethod]
+    public void DeleteIngredient_WithOneRecipeUsingIngredient_DeletesIngredientAndRecipe()
+    {
+        // Arrange
+        var ingredientId = 1;
+        var ingredientToDelete = new Ingredient { Id = ingredientId, Name = "IngredientToDelete" };
+        var recipe1 = new Recipe { Id = 1, Name = "Recipe1" };
+        appStorageMock.Setup(a => a.Ingredients).Returns(new HashSet<Ingredient> { ingredientToDelete });
+        appStorageMock.Setup(a => a.RecipeIngredients).Returns(new HashSet<RecipeIngredient> { new RecipeIngredient { IngredientId = ingredientId, RecipeId = 1 } });
+        appStorageMock.Setup(a => a.Recipes).Returns(new HashSet<Recipe> { recipe1 });
+
+        // Act
+        var result = businessLogicLayer.DeleteIngredient(ingredientId, null);
+
+        // Assert
+        Assert.IsTrue(result);
+        appStorageMock.Verify(a => a.Ingredients.Remove(ingredientToDelete), Times.Once);
+        appStorageMock.Verify(a => a.Recipes.Remove(recipe1), Times.Once);
+        appStorageMock.Verify(a => a.RecipeIngredients.Remove(It.IsAny<RecipeIngredient>()), Times.Once);
+    }
+
+    [TestMethod]
+    public void DeleteRecipe_WithValidRecipeId_DeletesRecipe()
+    {
+        // Arrange
+        var recipeId = 1;
+        var recipeToDelete = new Recipe { Id = recipeId, Name = "RecipeToDelete" };
+        appStorageMock.Setup(a => a.Recipes).Returns(new HashSet<Recipe> { recipeToDelete });
+        appStorageMock.Setup(a => a.RecipeIngredients).Returns(new HashSet<RecipeIngredient> { new RecipeIngredient { RecipeId = recipeId, IngredientId = 1 } });
+
+        // Act
+        var result = businessLogicLayer.DeleteRecipe(recipeId, null);
+
+        // Assert
+        Assert.IsTrue(result);
+        appStorageMock.Verify(a => a.Recipes.Remove(recipeToDelete), Times.Once);
+        appStorageMock.Verify(a => a.RecipeIngredients.Remove(It.IsAny<RecipeIngredient>()), Times.Once);
+    }
+
+    [TestMethod]
+    public void DeleteRecipe_WithNonExistingRecipe_ReturnsFalse()
+    {
+        // Arrange
+        appStorageMock.Setup(a => a.Recipes).Returns(new HashSet<Recipe>());
+
+        // Act
+        var result = businessLogicLayer.DeleteRecipe(1, "NonExistingRecipe");
+
+        // Assert
+        Assert.IsFalse(result);
+    }
+
 }
